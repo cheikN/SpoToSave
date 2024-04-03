@@ -162,9 +162,9 @@ def plot_example_emo(ind, df):
     return  fig
 
 
-def plot_radar(labels,cluster,fts):
+def plot_radar(labels,cluster,fts,features):
     #fts = get_features_name()
-    features = st.session_state["data"].loc[labels == cluster,fts]
+    #features = st.session_state["data"].loc[labels == cluster,fts]
 
     scaler = StandardScaler()
     scaled_features = scaler.fit_transform(features)

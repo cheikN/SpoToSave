@@ -74,10 +74,10 @@ def make_button_table(shape_column,fields, df,ctx,ctx_l):
         
         do_action = button_phold.button("lyrics", key=f'key_btn_table{ind}')
         if do_action:
-                #button_phold.empty()  #  remove button
-                get_lyrics(ind,ctx_l,df)
-                fig = plot_example_emo(ind,df)
-                st.session_state["fig_exp"] = fig
+            #button_phold.empty()  #  remove button
+            get_lyrics(ind,ctx_l,df)
+            fig = plot_example_emo(ind,df)
+            st.session_state["fig_exp"] = fig
 
         
 def compute_russel():
@@ -95,10 +95,7 @@ def compute_russel():
             concact_df(st.session_state["data"],st.session_state["emo_rusel"][0])
         
         exp_idx = 0
-        exp_val = st.session_state["emo_rusel"][0].loc[exp_idx, "valence"]
-        exp_nrj = st.session_state["emo_rusel"][0].loc[exp_idx, "energy"]
-        exp_emo = st.session_state["emo_rusel"][0].loc[exp_idx, "emo_russel"]
-        fig = plot_example_emo(exp_val,exp_nrj,exp_emo)
+        fig = plot_example_emo(exp_idx,st.session_state["emo_rusel"][0])
         st.session_state["fig_exp"] = fig
         
     except Exception as e:
@@ -141,37 +138,22 @@ def main():
 
         if st.session_state["emo_rusel"][0] is not None:
             fields = list(st.session_state["emo_rusel"][0].columns)
-            fields.remove("lyrics") if "lyrics" in fields else fields
+
+            if "lyrics" in fields:
+                fields.remove("lyrics")
+
             if st.session_state["emo_rusel"][1]:
                 shape_column = [2,2,1,1,1,1,1,1]
             else:
                 shape_column = [2,2,1,1,1,1]
             ctx = col1.container(border=True,height=500)
             make_button_table(shape_column,fields, st.session_state["emo_rusel"][0],ctx,col2)
-            #col1.data_editor(st.session_state["emo_rusel"],key="table_ed_emo",hide_index=True)
         
         if st.session_state["fig_exp"] is not None:
             col11, col21,col31 = col1.columns([1,3,1],gap="small") 
             col21.pyplot(st.session_state["fig_exp"])
     else:
         st.write("Need to be connected to spotify")
-
-    """if st.session_state["emo_rusel"] is not None:
-        if "lyrics" in st.session_state["data"].columns:
-            artist = st.session_state["data"].loc[0,"artist"].split(",")
-
-            if len(artist) > 2:
-                artist = ", ".join(artist[:2])+ "..."
-            else:
-                artist = ", ".join(artist)
-
-            title = st.session_state["data"].loc[0,"title"]
-            col2.header(f'Lyrics : {title} by {artist}')
-            ct_lyrics =  col2.container(height=820)
-            lyrics = st.session_state["data"].loc[0,"lyrics"].split("\n")
-
-            for lg in lyrics:
-                ct_lyrics.write(lg)"""
 
 if __name__ == "__main__":
     main()

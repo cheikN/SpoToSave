@@ -123,7 +123,8 @@ def main():
                 
 
         if st.session_state["data"] is not None:
-            data_see = st.session_state["data"].loc[:,["artist", "title", "popularity"]]
+            #data_see = st.session_state["data"].loc[:,["artist", "title", "popularity"]]
+            data_see = st.session_state["data"]
             col1.dataframe(data_see,hide_index=True)
             
             expand = col1.expander("TOP 5 ARTISTS",expanded=False)

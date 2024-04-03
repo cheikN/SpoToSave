@@ -4,11 +4,12 @@ import numpy as np
 
 import requests
 
-
+  
 import matplotlib.pyplot as plt
 
 from matplotlib import colors as mcolors
 from utils.help_plots import plot_radar
+from io import StringIO
 
 BASE_URL_FLASKAPI = "http://127.0.0.1:5000/"
 
@@ -73,15 +74,21 @@ def create_playlist(ind,labels):
         print(f'clicked button {ind}')
         track_ids = st.session_state["data"].loc[labels == ind,"track_id"].tolist()
         infos = {
-            "username" : st.session_state.get("username", ""),
-            "playlist_name" : f'cn_cluster_{ind}_date',
+            #"username" : st.session_state.get("username", ""),
+            "playlist_name" : f'cn_cluster_{ind}',
             "playlist_description" : "generate automatically from cluster",
             "track_ids" : track_ids
         }
         try:
             print("create playlist")
-            res = requests.request(method="get",url=BASE_URL_FLASKAPI+"create_playlist", json=infos)
+            res = requests.request(method="put",url=BASE_URL_FLASKAPI+"create_playlist", json=infos)
             res = res.json()
+            
+            if res["code"] == 403:
+                st.error(f'Playlist already exist with this name {infos["playlist_name"]} ({res["link"]})')
+            else:
+                st.success(f'Playlist created with this name {infos["playlist_name"]} ({res["link"]})')
+
         except Exception as e:
             issue_spo_api(e)
         
@@ -105,7 +112,8 @@ def get_info_cluster():
         col1.dataframe(st.session_state["data"].loc[labels == i,columns_to_see],hide_index=True,use_container_width=True)
 
         features_names = get_features_name()
-        fig, mean_df = plot_radar(labels,i,features_names)
+        features = st.session_state["data"].loc[labels == i,features_names]
+        fig, mean_df = plot_radar(labels,i,features_names,features)
         col2.write("Mean of all features")
         column_config= {
             "": "Feature",

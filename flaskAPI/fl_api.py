@@ -21,7 +21,7 @@ with open('creditentials_all.json') as credits_file:
 client_id = creditential["spotify"]["client_id"]
 client_secret = creditential["spotify"]["client_secret"]
 redirect_uri ='http://localhost:5000/callback'
-scope = 'user-library-read,playlist-modify-private'
+scope = 'user-library-read,playlist-modify-private,playlist-read-private, playlist-read-collaborative'
 
 cache_handler = MemoryCacheHandler()
 
@@ -292,20 +292,29 @@ def get_kmeans_emo():
     ret = jsonify(pdt_rt)
     return ret
 
-@app.route("/create_playlist")
+@app.route("/create_playlist", methods=["PUT"])
 def create_playlist():
     #infos = request.json['infos']
-    username = request.json["username"]
+    track_ids = request.json["track_ids"]
     playlist_name = request.json["playlist_name"]
     playlist_description = request.json["playlist_description"]
 
     ret = sp_oauth.cache_handler.get_cached_token()
     sp = Spotify(auth=ret["access_token"])
 
-    ret = sp.user_playlist_create(username, playlist_name, public=False,description = playlist_description)
-    #sp.current_user_playlists()
-    print(ret)
-    return username
+    user_id = sp.me()['id']
+    playlists = sp.user_playlists(user_id)["items"]
+
+    for pl in playlists:
+        name = pl["name"]
+        if name == playlist_name:
+            ret = {"code" : 403, "link":pl["external_urls"]["spotify"]}
+            return ret
+
+    ret = sp.user_playlist_create(user_id, playlist_name, public=False,description = playlist_description)
+    id_playlist = ret["id"]
+    sp.playlist_add_items(playlist_id=id_playlist, items=track_ids)
+    return {"code" : 203,"link":ret["external_urls"]["spotify"]}
 
 if __name__ == "__main__":
     app.run(debug=True)
