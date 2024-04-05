@@ -122,7 +122,9 @@ def get_info_cluster():
         col2.dataframe(mean_df,hide_index=False,use_container_width=True,height=425,column_config=column_config)
         col3.write("Radar chart of the features")
         col3.pyplot(fig)
-        col3.button("Create playlist",key=f'key_button_{i}',on_click=create_playlist(i,labels),use_container_width=True)
+        
+        if st.session_state["connect"]:
+            col3.button("Create playlist",key=f'key_button_{i}',on_click=create_playlist(i,labels),use_container_width=True)
 
 
 def compute_kmeans():
@@ -160,7 +162,7 @@ def main():
     
     st.header(f'Similarity with kmeans',divider='rainbow')
     
-    if st.session_state["data"] is not None and st.session_state["connect"]:
+    if st.session_state["data"] is not None:
         if st.button("compute_kmeans"):
             compute_kmeans()
 

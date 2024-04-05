@@ -33,7 +33,7 @@ def get_lyrics(ind,ctx,df):
         ctx.header(f'Lyrics : {title} by {artist}')
         ct_lyrics =  ctx.container(height=820)
         lyrics = ["No Lyrics found with Genius API or Instrumental music"]
-        if df.loc[ind,"lyrics"] is not None:
+        if type(df.loc[ind,"lyrics"]) == str:
             lyrics = df.loc[ind,"lyrics"].split("\n")
 
         for lg in lyrics:
@@ -120,13 +120,14 @@ def main():
     if "emo_rusel" not in st.session_state:
         st.session_state["emo_rusel"] = (None,False)
     
+    from_csv = st.session_state.get("from_csv", False)
     st.title('SpoToSave')
     
     col1, col2 = st.columns([0.7,0.3],gap="large")
     
     col1.header(f'Emotion compute via Circumflex of Russel',divider='rainbow')
-    
-    if st.session_state["data"] is not None and st.session_state["connect"]:
+    print(from_csv)
+    if st.session_state["data"] is not None and st.session_state["connect"] and not from_csv:
         ctx_btn = col1.container()
         colbtn1, colbtn2, colbtn3 = ctx_btn.columns([1,1,4])
         if colbtn1.button("compute_russel"):
@@ -148,6 +149,23 @@ def main():
                 shape_column = [2,2,1,1,1,1]
             ctx = col1.container(border=True,height=500)
             make_button_table(shape_column,fields, st.session_state["emo_rusel"][0],ctx,col2)
+        
+        if st.session_state["fig_exp"] is not None:
+            col11, col21,col31 = col1.columns([1,3,1],gap="small") 
+            col21.pyplot(st.session_state["fig_exp"])
+    
+    elif st.session_state["data"] is not None and from_csv:
+        print("csv")
+        fields = ["artist", "title", "valence", "energy", "emo_russel"]
+        csv_column = st.session_state["data"].columns
+        if "lang" in csv_column and "score_lyrics" in csv_column:
+            fields.append("lang")
+            fields.append("score_lyrics")
+            shape_column = [2,2,1,1,1,1,1,1]
+        else:
+            shape_column = [2,2,1,1,1,1]
+        ctx = col1.container(border=True,height=500)
+        make_button_table(shape_column,fields, st.session_state["data"],ctx,col2)
         
         if st.session_state["fig_exp"] is not None:
             col11, col21,col31 = col1.columns([1,3,1],gap="small") 

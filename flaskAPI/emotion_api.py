@@ -232,6 +232,7 @@ def get_lyrics_info(title : str, artist : str, genius : Genius, sentiment : Sent
         remove_emb = re.compile("\d*Embed$")
         lyrics_clean = re.sub(remove_emb,"",lyrics)
         clean_lyrics = "\n".join(lyrics_clean.split("\n")[1:])
+        output_info = {"lyrics" : clean_lyrics}
         
         if detector is not None:
             language = detector.detect_language_of(clean_lyrics)
@@ -249,7 +250,9 @@ def get_lyrics_info(title : str, artist : str, genius : Genius, sentiment : Sent
             valence_lyric = (sentiment_score['compound'] + 1)/2
             score_lyric = valence_lyric
 
-        return {"lyrics" : clean_lyrics, "lang": lang, "score_lyrics" : score_lyric}
+        output_info["lang"] = lang
+        output_info["score_lyrics"] = score_lyric
+        return output_info
     
     except Exception as error:
         print(error)
@@ -265,7 +268,7 @@ def compute_emo_rusell(df : pd.DataFrame, with_lyrics : bool = False):
     detector = None
 
     if with_lyrics:
-        genius = Genius(GENIUS_API_KEY, skip_non_songs=False, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=False)
+        genius = Genius(GENIUS_API_KEY, skip_non_songs=False, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
 
         analyser = SentimentIntensityAnalyzer()
 

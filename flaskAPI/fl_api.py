@@ -63,14 +63,15 @@ def check_token():
         auth_url = sp_oauth.get_authorize_url()
         #return redirect(auth_url)
         return auth_url
-    #return redirect(url_for("get_liked"))
+    return "/"
 
 @app.route('/')
 def home():
     url = check_token()
     #return redirect("http://localhost:8501")
     #return redirect(url_for("get_liked"))
-    return jsonify({"message" : {"body" : {"spot_url": url}}, "code" : 202})
+    token_available = url == "/"
+    return jsonify({"message" : {"body" : {"spot_url": url, "token_available":token_available}}, "code" : 202})
 
 @app.route('/callback')
 def callback():
@@ -172,7 +173,7 @@ def get_liked():
     #retrieve all songs (limit max is 50)
     while not all_ret:
         print("start retrieve")
-        liked_song = sp.current_user_saved_tracks(limit=10, offset=cur_off)
+        liked_song = sp.current_user_saved_tracks(limit=50, offset=cur_off)
         
         for idx, item in enumerate(liked_song['items']):
             print("NEXT MUSIQUE")
@@ -317,4 +318,4 @@ def create_playlist():
     return {"code" : 203,"link":ret["external_urls"]["spotify"]}
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(debug=False)

@@ -22,7 +22,6 @@ def get_name():
         issue_spo_api(e)
 
 
-
 def main():
     
     st.set_page_config(layout="wide")
@@ -31,24 +30,21 @@ def main():
     if "data" not in st.session_state:
         st.session_state["data"] = None
 
-    if "connect" not in st.session_state:
-        st.session_state["connect"] = False
+    if "from_csv" not in st.session_state:
+        st.session_state["from_csv"] = False
 
-    if "auth_link" not in st.session_state:
-        print("get_auth link")
-        res = requests.request(method="get",url=BASE_URL_FLASKAPI)
-        res = res.json()
-        ulr_auth_spot = res["message"]["body"]["spot_url"]
-        st.session_state["auth_link"] = ulr_auth_spot
+    res = requests.request(method="get",url=BASE_URL_FLASKAPI)
+    res = res.json()
+    ulr_auth_spot = res["message"]["body"]["spot_url"]
+    st.session_state["auth_link"] = ulr_auth_spot
+    print(res["message"]["body"])
+    st.session_state["connect"] = res["message"]["body"]["token_available"]
     
     url_link = st.session_state.get("auth_link","/")
-    con = st.query_params.get("con","0")
+
 
     if not st.session_state["connect"]:
-        if con == "1":
-            st.session_state["connect"] = True
-        else:
-            st.session_state["connect"] = False
+        st.session_state["connect"] = int(st.query_params.get("con",0))
 
     if not st.session_state["connect"]:
         cols = st.columns([1,5,1])
@@ -58,15 +54,27 @@ def main():
 \nJoin us on a journey of discovery as we decode the emotional nuances of your Spotify playlist. SpoToSave is where data meets emotion, transforming your listening experience into a captivating exploration of the human psyche through music.""")
         cols[1].write(intro_text)
         #cols[1].link_button("Connect to spotify",url=url_link,)
-        cols[1].markdown(f'<a href="{url_link}" target="_self"><button style="background-color:black; inline-size: -moz-available;">Connect to spotify</button></a>',unsafe_allow_html=True)
-
-    print(st.session_state["connect"])    
-    if st.session_state["connect"]:
-        if "username" not in st.session_state:
+        cols11 = cols[1].columns([1,1])
+        cols11[0].markdown(f'<a href="{url_link}" target="_self"><button style="background-color:black; inline-size: -moz-available;">Connect to spotify</button></a>',unsafe_allow_html=True)
+        up_file = cols11[1].file_uploader("Import data (csv file)")
+        if up_file is not None:
+            dataframe = pd.read_csv(up_file)
+            st.session_state["data"] = dataframe
+            st.session_state["from_csv"] = True
+            st.toast('Data collected!', icon='🎉',)
+    else:
+        if "username" not in st.session_state and st.session_state["data"] is None:
             get_name()
-        st.write("Welcome "+st.session_state["username"])
-        st.toast('Connected to Spotify!', icon='🎉',)
-        st.switch_page("pages/Data.py")
+            st.session_state["from_csv"] = False
+            st.toast('Connected to Spotify!', icon='🎉')
+        st.write("Welcome "+st.session_state.get("username", ""))
+        up_file = st.file_uploader("Import data (csv file)")
+        if up_file is not None:
+            dataframe = pd.read_csv(up_file)
+            st.session_state["data"] = dataframe
+            st.session_state["from_csv"] = True
+            st.toast('Data collected!', icon='🎉',)
+        #st.switch_page("pages/Data.py")
 
     
     

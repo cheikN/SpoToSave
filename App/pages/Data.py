@@ -114,12 +114,11 @@ def main():
     
     col1.header(f'DATA  { st.session_state["username"] }',divider='rainbow')
     
-    if st.session_state["connect"]:
+    if st.session_state["connect"] and st.session_state["data"] is None:
         if col1.button("get_liked"):
-            if st.session_state["data"] is None:
-                with st.spinner('Wait for it...'):
-                    get_liked()
-                st.success('Done!')
+            with st.spinner('Wait for it...'):
+                get_liked()
+            st.success('Done!')
                 
 
         if st.session_state["data"] is not None:
@@ -130,6 +129,9 @@ def main():
             expand = col1.expander("TOP 5 ARTISTS",expanded=False)
             if expand:
                 get_top_artist(expand)
+
+    elif st.session_state["data"] is not None:
+        col1.dataframe(st.session_state["data"],hide_index=True)
     else:
         st.write("Need to be connectec to spotify")
     
