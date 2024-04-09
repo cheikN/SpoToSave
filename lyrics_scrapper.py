@@ -1,33 +1,22 @@
 from bs4 import BeautifulSoup, Tag
 import requests
-import re
+import re,json
+from difflib import SequenceMatcher
 
-GEN_API_KEY ="21q4NslCeI1gJYII9u5pacAe6Gah42oqxPSxrHSheqZBjTrgjABz7c6NL93Mp3YK"
+def clean_string(info):
+    punctuation = re.compile("[!#$%'()*+,.\\\/;<=>?@\[\]\^`{|}~]")
+    punc2 = re.compile("[-_&]")
+    #expr_non_char = re.compile("[^a-zA-Z\s]")
+    clean_info = re.sub(punctuation,"",info)
+    clean_info = re.sub(punc2," ",clean_info)
+    #clean_info = re.sub(expr_non_char,"",clean_info)
+    clean_info = sorted(clean_info.split(" "))
+    clean_info = " ".join(clean_info).lower().strip()
+
+    return clean_info
+
 def tmp():
-    def _get_item_from_search_response(self, response, title, artist, type_, result_type):
-        """Gets the desired item from the search results.
-
-        This method tries to match the `hits` of the :obj:`response` to
-        the :obj:`response_term`, and if it finds no match, returns the first
-        appropriate hit if there are any.
-
-        Args:
-            response (:obj:`dict`): A response from
-                :meth:‍‍‍‍`Genius.search_all` to go through.
-            search_term (:obj:`str`): The search term to match with the hit.
-            type_ (:obj:`str`): Type of the hit we're looking for (e.g. song, artist).
-            result_type (:obj:`str`): The part of the hit we want to match
-                (e.g. song title, artist's name).
-
-        Returns:
-            :obj:‍‍`str` \\|‌ :obj:`None`:
-            - `None` if there is no hit in the :obj:`response`.
-            - The matched result if matching succeeds.
-            - The first hit if the matching fails.
-
-        """
-
-        # Convert list to dictionary
+    # Convert list to dictionary
         top_hits = response['sections'][0]['hits']
 
         # Check rest of results if top hit wasn't the search type
@@ -83,24 +72,67 @@ def tmp():
         if best_score_art >= 0.9 and best_score_title >= 0.4:
             return best_item
         return None
+
+def get_item_from_search_response(response, title, artist):
+
+    # Convert list to dictionary
+    top_hits = response['hits']
+    best_item = None
+    best_score = 0
+    infos = title+" "+artist
+    clean_infos = clean_string(infos)
+
+    for hit in top_hits:
+        item = hit['result']
+        to_cmpre = item["title"]+" "+item['artist_names']
+        to_cmpre = clean_string(to_cmpre)
+        score_similarty = SequenceMatcher(None, to_cmpre, clean_infos).ratio()
+        print(to_cmpre+ " [......] "+clean_infos+" =====> "+str(score_similarty))
+        if score_similarty > best_score:
+            best_score = score_similarty
+            best_item = item
+            
+            if best_score == 1.0: #get the best
+                return best_item
+            
+    if best_score >= 0.7:
+        return best_item
+    return None
 def main():
     print("lyrics scrapper genius")
-    url = "https://genius.com/Kid-cudi-mr-solo-dolo-iii-lyrics"
+    with open('creditentials_all.json') as credits_file:
+        creditential = json.load(credits_file)
+
+    GENIUS_API_KEY = creditential["GENIUS_API_KEY"]
+    artist_csv = "KEY, TAEYEON"
+    list_artists = artist_csv.split(",")
+    main_artist = " " .join(list_artists)
+    print(f"Looking for the main artist {main_artist}")
+    title = "Hate that…"
+
+    search_term = title+ " "+ main_artist
+    genius_search_url = f"http://api.genius.com/search?q={search_term}&access_token={GENIUS_API_KEY}"
+    response = requests.get(genius_search_url)
+    response = response.json()["response"]
+    best_item = get_item_from_search_response(response, title, main_artist)
+    #url = "https://genius.com/Kid-cudi-mr-solo-dolo-iii-lyrics"
+    url = best_item["url"]
     response = requests.get(url)
-    html = response.content
+    html = response.text
     #soup = BeautifulSoup(html,features="html.parser")
 
     new_re = re.compile("Lyrics__Container-.*")
     re_replace = re.compile("<\/i>|<i>|<b>|<\/b>")
+    clean_str = re.sub(re_replace, "\n", str(html))
 
-    clean_str = re.sub(re_replace, "", str(html))
     cleanSoup = BeautifulSoup(clean_str,features="html.parser")
     div_lyrics = cleanSoup.find_all("div", class_=new_re)
     list_lyrics = []
     for container_lyrics in div_lyrics:
         list_lyrics+=(list(container_lyrics.stripped_strings))
-    
-    pattern = re.compile("\[.*Chorus.*]$|\[.*Verse.*]$|\[.*Intro.*]$|\[.*Outro.*]$|\[.*Refrain.*]$|\[.*Drop.*]$")
+
+    #pattern = re.compile("\[.*Chorus.*]$|\[.*Verse.*]$|\[.*Intro.*]$|\[.*Outro.*]$|\[.*Refrain.*]$|\[.*Drop.*]$|\[.*Bridge.*]")
+    pattern = re.compile("\[.*?\]*")
     lyrics = ""
     for line in list_lyrics:
         if not re.search(pattern, line):
@@ -109,5 +141,7 @@ def main():
             print(f"String matches pattern: {line}")
             lyrics+= "\n"
     print(lyrics)
+    
+    
 if __name__ == "__main__":
     main()
