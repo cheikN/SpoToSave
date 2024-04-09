@@ -2,7 +2,6 @@ from bs4 import BeautifulSoup, Tag
 import requests
 import re
 
-GEN_API_KEY ="21q4NslCeI1gJYII9u5pacAe6Gah42oqxPSxrHSheqZBjTrgjABz7c6NL93Mp3YK"
 def tmp():
     def _get_item_from_search_response(self, response, title, artist, type_, result_type):
         """Gets the desired item from the search results.
