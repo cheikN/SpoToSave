@@ -10,7 +10,7 @@ From the output of kmeans, you can create playlist. It will be named (Cluster_0 
 - GameLyrics: Try to find where the lyrics come from (tiitle, artist)
 - Download: With the help of pytube, it donwload all your liked song. It takes times. It better to use the script *csv_to_download.py*
 
-##Prerequisites
+## Prerequisites
 Needs to have Spotify API key and Genius API key.
 Add api keys in a file .json or you can put them in your os environnement.
 In my case, it like thise : 
