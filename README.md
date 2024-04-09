@@ -1,6 +1,7 @@
 # SpoToSave
 ## Description
-It is project where you can get info (features,lyrics, emotion) about your liked song from Spotify.
+It is project where you can get info (features,lyrics, emotion) about your liked song from Spotify. It based on Flask (API part) and streamlit for the frontend.
+Contains:
 - **Data**: Get data info : title, artist, features song (ernergy, valence...) and also a Top 5 artists.
 - **Emotion**: Compute emotion from the **Circumplex model of emotion (Russell)**. With only valence and energy from song it is not perfect.
 For example, a song can be happy but the lyrics are not. That's why it is important to also compute the valence of lyrics and add to valence of the song.
