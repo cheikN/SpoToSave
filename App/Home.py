@@ -37,7 +37,6 @@ def main():
     res = res.json()
     ulr_auth_spot = res["message"]["body"]["spot_url"]
     st.session_state["auth_link"] = ulr_auth_spot
-    print(res["message"]["body"])
     st.session_state["connect"] = res["message"]["body"]["token_available"]
     
     url_link = st.session_state.get("auth_link","/")

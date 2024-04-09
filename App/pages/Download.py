@@ -41,34 +41,43 @@ def get_stream(queue,infos):
     best_search = s.results[0]
     str_f = best_search.streams.filter(only_audio=True).order_by("abr").desc().first()
     #filename = best_search.title + " " + best_search.author
-    queue.put((str_f,best_search,infos))
+
+    buffer = BytesIO()
+
+    filename = create_filename(curr_artist,curr_title)
+    
+    str_f.stream_to_buffer(buffer)
+    #st.audio(buffer, format='audio/mpeg')
+    buffer.seek(0)
+
+    queue.put((buffer.getvalue(),best_search,filename,infos[2]))
 
 #@st.cache_data(show_spinner=False)
-def download_audio_to_buffer(data,nb_song):
+def download_audio_to_buffer(data_todo,nb_song,ctx):
     list_buffers = []
     l_infos = []
-    buffer = BytesIO()
+    
     process = 4
     end = False
-    for ind in data.index[:20]:
+    for ind in data_todo.index:
 
         if (process + ind) > nb_song and not end:
             process = nb_song - ind
             end = True
 
-        curr_artist = data["artist"][ind]
-        curr_title = data["title"][ind]
+        curr_artist = data_todo["artist"][ind]
+        curr_title = data_todo["title"][ind]
         #print(f"proccessing {curr_artist} -- {curr_title}")
         
         #to_find = curr_artist + " " + curr_title 
         
-        l_infos.append((curr_artist,curr_title))
+        l_infos.append((curr_artist,curr_title,ind))
 
         if len(l_infos) % process == 0:
             #multiprocessing
             q = Queue()
             processes = []
-            rets = []
+            #rets = []
             for info in l_infos:
                 p = Process(target=get_stream, args=(q,info))
                 processes.append(p)
@@ -76,29 +85,16 @@ def download_audio_to_buffer(data,nb_song):
             
             for p in processes:
                 ret = q.get() # will block
-                rets.append(ret)
+                #rets.append(ret)
+                buff_ret, best_search, filename, indice = ret
+                st.session_state["data"].loc[indice,"downloaded"] = True
+                #df.loc[ind,"ytb_link"] = f"https://www.youtube.com/watch?v={best_search.video_id}"
+                st.session_state["data"].loc[indice,"video_id"] = best_search.video_id
+                ctx.write(filename)
+                list_buffers.append((buff_ret,filename))
 
             for p in processes:
-                p.join()
-
-            for ret in rets:
-                str_f = ret[0]    
-                best_search = ret[1]
-                artist, title = ret[2]
-
-                filename = create_filename(artist,title)
-                
-                #str_f.download(output_path = output_path, filename = filename+".mp3", max_retries=300)
-                data.loc[ind,"downloaded"] = True
-                #df.loc[ind,"ytb_link"] = f"https://www.youtube.com/watch?v={best_search.video_id}"
-                data.loc[ind,"video_id"] = best_search.video_id
-                
-                str_f.stream_to_buffer(buffer)
-                st.write(filename)
-                st.audio(buffer, format='audio/mpeg')
-                buffer.seek(0)
-
-                list_buffers.append((buffer.getvalue(),filename))
+                p.join()                
 
             l_infos = []
  
@@ -112,7 +108,10 @@ def main():
     data = st.session_state.get("data", None)
     audio_streams = st.session_state.get("audio_streams", "")
     if data is not None:
-        st.write("This process can take long time, also it may not contains the good music. Because it searchs on Youtube so there may contains audio from clip video")
+        ctx_main = st.container()
+        ctx = st.container(height=400,border=True)
+        ctx2 = st.container()
+        ctx_main.write("This process can take long time, also it may not contains the good music. Because it searchs on Youtube so there may contains audio from clip video")
         nb_song = len(data)
         audio_streams = st.session_state.get("audios", [])
 
@@ -122,12 +121,12 @@ def main():
         if 'video_id' not in data.columns:
             data["video_id"] = ["" for i in range(nb_song)] #if you want to generate playlist for youtube or know where it's come from
 
-        btn_collect = st.button("Get Yours Liked Songs")
+        btn_collect = ctx_main.button("Get Yours Liked Songs")
 
         if btn_collect:
             with st.spinner("Downloading Audio Stream from Youtube..."):
-                data = data.loc[data['downloaded'] == False]
-                audio_streams = download_audio_to_buffer(data,nb_song)
+                data_todo = data.loc[data['downloaded'] == False]
+                audio_streams = download_audio_to_buffer(data_todo,nb_song,ctx)
             
             st.session_state["audio_streams"] = audio_streams
 
@@ -139,14 +138,14 @@ def main():
                         zipf.writestr(f'{filename}.mp3', audio_stream)
 
                 output_zip_file = "liked_songs.zip"
-                st.download_button(
+                ctx2.download_button(
                         "Download Liked Song", 
                         file_name=output_zip_file, 
                         mime="application/zip", 
                         data=zip_buffer
                     )
-                st.success("Yata all videos downloaded in old fashion way! So be carefull about some audios...")
+                ctx2.success("Yata all videos downloaded in old fashion way! So be carefull about some audios...")
     else:
-        st.write("No data available. Please connect to spotify and go to page Data in order to get data")
+        st.write("No data available. Please connect to spotify/Upload csv file and go to page Data in order to get data")
 if __name__ == "__main__":
     main()

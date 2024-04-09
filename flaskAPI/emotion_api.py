@@ -5,6 +5,7 @@ import matplotlib.pyplot as plt
 from vaderSentiment.vaderSentiment import SentimentIntensityAnalyzer
 
 from lyricsgenius import Genius
+import genius_api
 import numpy as np
 
 
@@ -182,6 +183,88 @@ def create_vector(point,origin):
     return([point[0] - origin[0], point[1] - origin[1]])
 
 
+def get_lyrics_info_wo_genius(title : str, artist : str, token : str, sentiment : SentimentIntensityAnalyzer = None, detector : LanguageDetectorBuilder=None, translator : GoogleTranslator=None):
+    print(f"get lyrics info from {title} by {artist}")
+    print("---------------------------------NEW SONG TO ANALYSE-------------------------------------------")
+    lyrics = None
+    lang = None 
+    score_lyric = 0
+
+    titles = build_anothers_title(title)
+
+    try:
+        list_artist = artist.split(",")
+        main_artist = list_artist[0]
+
+        i = 0
+        while i < len(titles):
+            clean_tile = titles[i]
+            lyrics = genius_api.search(token, clean_tile, main_artist)
+            
+            if lyrics != None:
+                print(f"{clean_tile} FOUND in Genius")
+                break
+            i+=1
+
+        if lyrics == None:
+            if len(list_artist) > 1:
+                print("try to find another version by swapping")
+                main_artist = list_artist[1] #all romanized song by this author
+                lyrics = genius_api.search(token, clean_tile, main_artist)
+
+                if lyrics == None:
+                    print("try to find with all artists version")
+                    all_artist = list_artist
+                    if len(list_artist) > 3:
+                        all_artist = list_artist[:3] #may be an issue if there is a lot of artists
+                    all_artist = " ".join(all_artist)
+                    lyrics = genius_api.search(token, clean_tile, all_artist)
+
+                if lyrics == None:
+                    print("try to find romanized version")
+                    featuring = " ".join([art for art in list_artist[1:]])
+                    title +=f" {main_artist} feat {featuring} romanized"
+                    main_artist = "Genius Romanizations" #all romanized song by this author
+                    lyrics = genius_api.search(token, clean_tile, artist)
+            else:
+                print("try to find romanized version")
+                title +=f" {artist} romanized"
+                main_artist = "Genius Romanizations" #all romanized song by this author
+                lyrics = genius_api.search(token, clean_tile, artist)
+        
+        
+        if lyrics == None:
+            print("Artists , Title (romanized also) not found in Genius")
+            return {"lyrics" : lyrics, "lang": lang, "score_lyrics" : score_lyric}
+        
+        output_info = {"lyrics" : lyrics}
+        
+        if detector is not None:
+            language = detector.detect_language_of(lyrics)
+
+            lang = language.name
+
+            if language.name != "ENGLISH":
+                translator.source = language.name
+
+                if translator is not None:
+                    lyrics = translator.translate(lyrics)
+
+        if sentiment:
+            sentiment_score = sentiment.polarity_scores(lyrics)
+            valence_lyric = (sentiment_score['compound'] + 1)/2
+            score_lyric = valence_lyric
+
+        output_info["lang"] = lang
+        output_info["score_lyrics"] = score_lyric
+        return output_info
+    
+    except Exception as error:
+        print(error)
+        print("Not found on Genius")
+        return {"lyrics" : lyrics, "lang": lang, "score_lyrics" : score_lyric}
+    
+
 def get_lyrics_info(title : str, artist : str, genius : Genius, sentiment : SentimentIntensityAnalyzer = None, detector : LanguageDetectorBuilder=None, translator : GoogleTranslator=None):
     print(f"get lyrics info from {title} by {artist}")
     print("---------------------------------NEW SONG TO ANALYSE-------------------------------------------")
@@ -218,9 +301,14 @@ def get_lyrics_info(title : str, artist : str, genius : Genius, sentiment : Sent
                 if song == None:
                     print("try to find romanized version")
                     featuring = " ".join([art for art in list_artist[1:]])
-                    title +=f" feat {featuring} romanized"
+                    title +=f" {main_artist} feat {featuring} romanized"
                     main_artist = "Genius Romanizations" #all romanized song by this author
                     song = genius.search_song(title, main_artist,get_full_info=True)
+            else:
+                print("try to find romanized version")
+                title +=f" {artist} romanized"
+                main_artist = "Genius Romanizations" #all romanized song by this author
+                song = genius.search_song(title, main_artist,get_full_info=True)
         
         
         if song == None:
@@ -268,8 +356,8 @@ def compute_emo_rusell(df : pd.DataFrame, with_lyrics : bool = False):
     detector = None
 
     if with_lyrics:
-        genius = Genius(GENIUS_API_KEY, skip_non_songs=False, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
-
+        #genius = Genius(GENIUS_API_KEY, skip_non_songs=False, excluded_terms=["(Remix)", "(Live)"], remove_section_headers=True)
+        genius = GENIUS_API_KEY
         analyser = SentimentIntensityAnalyzer()
 
         translator = GoogleTranslator(source='auto', target='en')
@@ -284,7 +372,7 @@ def compute_emo_rusell(df : pd.DataFrame, with_lyrics : bool = False):
         title, artist = df.loc[ind,"title"], df.loc[ind,"artist"]
 
         if with_lyrics:
-            info_lyrics = get_lyrics_info(title, artist, genius, analyser, detector, translator)
+            info_lyrics = get_lyrics_info_wo_genius(title, artist, genius, analyser, detector, translator)
         
             df.loc[ind,"lyrics"] = info_lyrics["lyrics"]
             
